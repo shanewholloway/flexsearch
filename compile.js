@@ -13,6 +13,8 @@ fs.existsSync("log") || fs.mkdirSync("log");
 
 var flag_str = "";
 var language_out;
+var formatting;
+var compilation_level;
 
 var options = (function(argv){
 
@@ -30,6 +32,14 @@ var options = (function(argv){
             if(index === "LANGUAGE_OUT"){
 
                 language_out = val;
+            }
+            else if(index === "FORMATTING"){
+
+                formatting = val;
+            }
+            else if(index === "COMPILATION_LEVEL"){
+
+                compilation_level = val;
             }
             else{
 
@@ -50,6 +60,11 @@ var options = (function(argv){
 
 var parameter = (function(opt){
 
+    if(formatting && !opt["formatting"]){
+
+        opt["formatting"] = formatting;
+    }
+
     var parameter = '';
 
     for(var index in opt){
@@ -63,23 +78,27 @@ var parameter = (function(opt){
     return parameter;
 })({
 
-    compilation_level: "ADVANCED_OPTIMIZATIONS", //"WHITESPACE"
+    compilation_level: compilation_level || "ADVANCED_OPTIMIZATIONS", //"WHITESPACE"
     use_types_for_optimization: true,
-    new_type_inf: true,
+    //new_type_inf: true,
     jscomp_warning: "newCheckTypes",
+    jscomp_error: "newCheckTypesExtraChecks",
     //jscomp_error: "strictCheckTypes",
     generate_exports: true,
     export_local_property_definitions: true,
     language_in: "ECMASCRIPT6_STRICT",
     language_out: language_out || "ECMASCRIPT6_STRICT",
+    //rewrite_polyfills: false,
     process_closure_primitives: true,
     summary_detail_level: 3,
     warning_level: "VERBOSE",
     emit_use_strict: options["RELEASE"] !== "lang",
     output_manifest: "log/manifest.log",
     output_module_dependencies: "log/module_dependencies.log",
-    property_renaming_report: "log/renaming_report.log"
-    //formatting: "PRETTY_PRINT"
+    property_renaming_report: "log/renaming_report.log",
+    strict_mode_input: true,
+    assume_function_wrapper: true
+    //formatting: formatting || "DEFAULT" //"PRETTY_PRINT"
 });
 
 var release = options["RELEASE"];
@@ -112,12 +131,13 @@ if(release === "lang"){
 }
 else{
 
-    exec("java -jar node_modules/google-closure-compiler-java/compiler.jar" + parameter + "' --js='flexsearch.js' --js='lang/**.js' --js='!lang/**.min.js'" + flag_str + " --js_output_file='flexsearch." + (options["RELEASE"] || "custom") + ".js' && exit 0", function(){
+    exec("java -jar node_modules/google-closure-compiler-java/compiler.jar" + parameter + " --js='flexsearch.js' --js='lang/**.js' --js='!lang/**.min.js'" + flag_str + " --js_output_file='dist/flexsearch." + (options["RELEASE"] || "custom") + ".js' && exit 0", function(){
 
         var filename = "flexsearch." + (options["RELEASE"] || "custom") + ".js";
 
         console.log("Build Complete: " + filename);
 
+        /*
         if(release === "es5"){
 
             //fs.existsSync("dist/") || fs.mkdirSync("dist/");
@@ -127,6 +147,7 @@ else{
             //fs.copyFileSync(filename, "dist/latest/" + filename);
             fs.unlinkSync(filename);
         }
+        */
     });
 }
 

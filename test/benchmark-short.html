@@ -17,11 +17,11 @@
 </head>
 <body>
 <h2>Benchmark Comparison</h2>
-<h4>Indexed Text: "Gulliver's Travels" (Swift Jonathan 1726)</h4>
+<h4>Indexed Text: Movie Titles</h4>
 <hr>
 <div id="container"></div>
 <hr>
-Test rules: 1. no cache allowed, 2. no async allowed, 3. should return at least 7 matches for the query "gulliver", 4. result should be ordered by relevance
+Test rules: 1. no cache allowed, 2. no async allowed, 3. should return at least 8 matches for the query "The Spirit", 4. result should be ordered by relevance
 <script src="../dist/flexsearch.light.js"></script>
 <script src="https://cdn.jsdelivr.net/gh/nextapps-de/bulksearch@master/bulksearch.light.js"></script>
 <script src="https://cdn.jsdelivr.net/gh/weixsong/elasticlunr.js@0.9.6/example/elasticlunr.min.js"></script>
@@ -33,16 +33,16 @@ Test rules: 1. no cache allowed, 2. no async allowed, 3. should return at least 
 <script src="https://cdn.jsdelivr.net/gh/karussell/jsii@master/web/js/src/JSii.js"></script>
 <script src="https://gistcdn.githack.com/vlad-x/a25e0c5c1eeb6bf6aa38/raw/02d1a1703e4a99a7c733c85097f583579f6af4e2/bm25.js"></script>
 <script src="https://rawcdn.githack.com/jeancroy/FuzzySearch/cbcdd8307d70a209b1cbf17a535158d5c21840d7/dist/FuzzySearch.min.js"></script>
-<script src="../data/gulliver.js"></script>
+<script src="../data/movies.js"></script>
 <script>
 
     (function(){
 
         var bulksearch;
         var flexsearch;
-        var flexsearch_cache;
-        var flexsearch_worker;
-        var flexsearch_cache_scale;
+        // var flexsearch_cache;
+        // var flexsearch_worker;
+        // var flexsearch_cache_scale;
         var elasticsearch;
         var lunrsearch;
         var wade;
@@ -77,7 +77,7 @@ Test rules: 1. no cache allowed, 2. no async allowed, 3. should return at least 
 
                     return flexsearch.search(query);
                 },
-                loops: 275000
+                loops: 350000
             },
 
             /*
@@ -105,7 +105,9 @@ Test rules: 1. no cache allowed, 2. no async allowed, 3. should return at least 
                 },
                 loops: 1000000
             },
+            */
 
+            /*
             flexsearch_cache_balanced: {
 
                 init: function(){
@@ -130,7 +132,9 @@ Test rules: 1. no cache allowed, 2. no async allowed, 3. should return at least 
                 },
                 loops: 1000000
             },
+            */
 
+            /*
             flexsearch_worker: {
 
                 init: function(){
@@ -181,7 +185,7 @@ Test rules: 1. no cache allowed, 2. no async allowed, 3. should return at least 
 
                     return bulksearch.search(query);
                 },
-                loops: 250
+                loops: 2800
             },
 
             elasticlunr: {
@@ -201,7 +205,7 @@ Test rules: 1. no cache allowed, 2. no async allowed, 3. should return at least 
 
                     return elasticsearch.search(query);
                 },
-                loops: 100
+                loops: 700
             },
 
             lunr: {
@@ -211,8 +215,8 @@ Test rules: 1. no cache allowed, 2. no async allowed, 3. should return at least 
                     lunrsearch = lunr(function(){
                         this.ref("id");
                         this.field("content");
-                        for(var i = 0; i < text_data.length; i++){
-                            this.add({id: i, content: text_data[i]});
+                        for(var i = 0; i < data.length; i++){
+                            this.add({id: i, content: data[i]});
                         }
                     });
                 },
@@ -221,14 +225,14 @@ Test rules: 1. no cache allowed, 2. no async allowed, 3. should return at least 
 
                     return lunrsearch.search(query);
                 },
-                loops: 350
+                loops: 2400
             },
 
             wade: {
 
                 init: function(){
 
-                    wade = Wade(text_data.slice(0));
+                    wade = Wade(data.slice(0));
                 },
                 sort: function(a, b){
 
@@ -240,7 +244,7 @@ Test rules: 1. no cache allowed, 2. no async allowed, 3. should return at least 
 
                     return wade(query).sort(this.sort);
                 },
-                loops: 1500
+                loops: 10000
             },
 
             fuse: {
@@ -249,8 +253,8 @@ Test rules: 1. no cache allowed, 2. no async allowed, 3. should return at least 
 
                     var payload = [];
 
-                    for(var i = 0; i < text_data.length; i++){
-                        payload[i] = {id: i, content: text_data[i]};
+                    for(var i = 0; i < data.length; i++){
+                        payload[i] = {id: i, content: data[i]};
                     }
 
                     fuse = new Fuse(payload, {
@@ -276,8 +280,8 @@ Test rules: 1. no cache allowed, 2. no async allowed, 3. should return at least 
 
                     var payload = [];
 
-                    for(var i = 0; i < text_data.length; i++){
-                        payload[i] = {id: i, content: text_data[i]};
+                    for(var i = 0; i < data.length; i++){
+                        payload[i] = {id: i, content: data[i]};
                     }
 
                     jssearch = new JsSearch.Search("id");
@@ -289,7 +293,7 @@ Test rules: 1. no cache allowed, 2. no async allowed, 3. should return at least 
 
                     return jssearch.search(query);
                 },
-                loops: 800
+                loops: 8000
             },
 
             jsii: {
@@ -298,8 +302,8 @@ Test rules: 1. no cache allowed, 2. no async allowed, 3. should return at least 
 
                     var payload = [];
 
-                    for(var i = 0; i < text_data.length; i++){
-                        payload[i] = {id: i, text: text_data[i]};
+                    for(var i = 0; i < data.length; i++){
+                        payload[i] = {id: i, text: data[i]};
                     }
 
                     jsii = new JSii();
@@ -310,7 +314,7 @@ Test rules: 1. no cache allowed, 2. no async allowed, 3. should return at least 
 
                     return jsii.search(query);
                 },
-                loops: 600
+                loops: 100000
             },
 
             bm25: {
@@ -319,8 +323,8 @@ Test rules: 1. no cache allowed, 2. no async allowed, 3. should return at least 
 
                     bm25 = new BM25();
 
-                    for(var i = 0; i < text_data.length; i++){
-                        bm25.addDocument({id: i, body: text_data[i]});
+                    for(var i = 0; i < data.length; i++){
+                        bm25.addDocument({id: i, body: data[i]});
                     }
 
                     bm25.updateIdf();
@@ -330,14 +334,14 @@ Test rules: 1. no cache allowed, 2. no async allowed, 3. should return at least 
 
                     return bm25.search(query);
                 },
-                loops: 95
+                loops: 50
             },
 
             fuzzysearch: {
 
                 init: function(){
 
-                    fuzzysearch = new FuzzySearch({source:text_data.slice(0)});
+                    fuzzysearch = new FuzzySearch({source:data.slice(0)});
                 },
                 add: function(index, content){},
                 query: function(query){
@@ -385,14 +389,14 @@ Test rules: 1. no cache allowed, 2. no async allowed, 3. should return at least 
 
             test.init();
 
-            if(is_mobile){
+            if(is_mobile && (test.loops > 1)){
 
-                test.loops = Math.max((test.loops / 5) >> 0, 1);
+                test.loops = (test.loops / 5) >> 0;
             }
 
-            for(var i = 0; i < text_data.length; i++){
+            for(var i = 0; i < data.length; i++){
 
-                test.add(i, text_data[i]);
+                test.add(i, data[i]);
             }
 
             document.getElementById("test-" + key).textContent = "ready ...";
@@ -415,30 +419,18 @@ Test rules: 1. no cache allowed, 2. no async allowed, 3. should return at least 
             }
         }
 
-        var text_queries_notfound = [
-
-            "undefined1 undefined2 undefined3",
-            "undefined"
-        ];
-
         function start_tests(suite, index, keys){
 
-            var queries = suite === 0 ? text_queries : (suite === 1 ? text_queries_multi : text_queries_notfound);
-            var len = queries.length;
+            var phrase = suite === 0 ? "mermaid" : (suite === 1 ? "little mermaid" : "undefined");
             var key = keys[index];
             var test = tests[key];
             var loops = test.loops;
             var query = test.query;
             var start = Date.now();
 
-            for(var i = 0; i < len; i++){
+            for(var x = 0; x < loops; x++){
 
-                var phrase = queries[i];
-
-                for(var x = 0; x < loops; x++){
-
-                    query(phrase);
-                }
+                query(phrase);
             }
 
             var duration = Date.now() - start;

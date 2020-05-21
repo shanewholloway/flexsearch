@@ -1,14 +1,9 @@
 if(typeof module !== "undefined"){
 
-    // Node.js Stub
-
-    URL = function(string){};
-    URL.createObjectURL = function(val){};
-    Blob = function(string){};
-
-    var env = process.argv[3] === "test" ? "min" : process.argv[3] === "test/" ? "light" : "";
+    var env = (process.argv[3] === "test" ? "min" : process.argv[3] === "test/" ? "light" : process.argv[3] === "test/test.js" ? "pre" : "");
     var expect = require("chai").expect;
-    var FlexSearch = require("../flexsearch" + (env ? "." + env : "") + ".js");
+    var FlexSearch = require("../" + (env ? "dist/": "") + "flexsearch" + (env ? "." + env : "") + ".js");
+    //require("../lang/en.min.js");
 }
 
 var flexsearch_default;
@@ -110,6 +105,7 @@ describe("Initialize", function(){
 
             encode: "icase",
             tokenize: "reverse",
+            resolution: 10,
             async: false,
             worker: false
         });
@@ -134,12 +130,26 @@ describe("Initialize", function(){
 
             encode: "icase",
             tokenize: "reverse",
-            cache: true
+            cache: 2
         });
 
-        expect(flexsearch_default).to.be.an.instanceOf(FlexSearch);
-        expect(flexsearch_sync).to.be.an.instanceOf(FlexSearch);
-        expect(flexsearch_async).to.be.an.instanceOf(FlexSearch);
+        it("Should have correct constructors", function(){
+
+            expect(flexsearch_default).to.be.an.instanceOf(FlexSearch);
+            expect(flexsearch_sync).to.be.an.instanceOf(FlexSearch);
+            expect(flexsearch_async).to.be.an.instanceOf(FlexSearch);
+        });
+
+        it("Should have correct uuids", function(){
+
+            expect(flexsearch_default.id).to.equal(0);
+            expect(flexsearch_sync.id).to.equal(1);
+            expect(flexsearch_async.id).to.equal(2);
+            expect(flexsearch_icase.id).to.equal(3);
+            expect(flexsearch_simple.id).to.equal(4);
+            expect(flexsearch_advanced.id).to.equal(5);
+            expect(flexsearch_extra.id).to.equal(6);
+        });
     });
 
     it("Should have all provided methods", function(){
@@ -150,22 +160,21 @@ describe("Initialize", function(){
         expect(flexsearch_default).to.respondTo("remove");
         expect(flexsearch_default).to.respondTo("clear");
         expect(flexsearch_default).to.respondTo("init");
+        expect(flexsearch_default).to.respondTo("destroy");
+
+        expect(flexsearch_default).to.hasOwnProperty("length");
+        expect(flexsearch_default).to.hasOwnProperty("index");
+
+        if(env !== "light"){
+
+            expect(flexsearch_default).to.respondTo("where");
+            expect(flexsearch_default).to.respondTo("find");
+        }
 
         if(env !== "light" && env !== "min"){
 
             expect(flexsearch_default).to.respondTo("info");
         }
-    });
-
-    it("Should have correct uuids", function(){
-
-        expect(flexsearch_default.id).to.equal(0);
-        expect(flexsearch_sync.id).to.equal(1);
-        expect(flexsearch_async.id).to.equal(2);
-        expect(flexsearch_icase.id).to.equal(3);
-        expect(flexsearch_simple.id).to.equal(4);
-        expect(flexsearch_advanced.id).to.equal(5);
-        expect(flexsearch_extra.id).to.equal(6);
     });
 
     it("Should have the correct options", function(){
@@ -177,7 +186,7 @@ describe("Initialize", function(){
             expect(flexsearch_async.async).to.equal(true);
         }
 
-        if((env !== "light") && (env !== "min")){
+        if((env !== "light") && (env !== "min") && (env !== "pre")){
 
             expect(flexsearch_default.tokenize).to.equal("forward");
             expect(flexsearch_strict.tokenize).to.equal("strict");
@@ -203,7 +212,7 @@ describe("Add (Sync)", function(){
         flexsearch_sync.add(2, "bar");
         flexsearch_sync.add(1, "foobar");
 
-        expect(flexsearch_sync.index).to.have.keys(["@0", "@1", "@2"]);
+        expect(flexsearch_sync.index).to.have.members(["@0", "@1", "@2"]);
         expect(flexsearch_sync.length).to.equal(3);
     });
 
@@ -396,16 +405,45 @@ if(env !== "light"){
 
         it("Should have been added to the index", function(done){
 
-            flexsearch_async.add(0, "foo");
+            var index = new FlexSearch();
+
+            expect(index.length).to.equal(0);
+
+            index.add(0, "foo", function(){
+
+                expect(index.length).to.equal(1);
+
+                done();
+            });
+
+            expect(index.length).to.equal(0);
+        });
+
+        it("Should have been added to the index", function(done){
+
+            expect(flexsearch_async.length).to.equal(0);
+
+            flexsearch_async.add(0, "foo", function(){
+
+                done();
+            });
+
+            expect(flexsearch_async.length).to.equal(0);
+        });
+
+        it("Should have been added to the index", function(done){
+
+            expect(flexsearch_async.length).to.equal(1);
+
             flexsearch_async.add(2, "bar");
             flexsearch_async.add(1, "foobar");
 
-            expect(flexsearch_async.length).to.equal(0);
+            expect(flexsearch_async.length).to.equal(1);
 
             setTimeout(function(){
 
                 expect(flexsearch_async.length).to.equal(3);
-                expect(flexsearch_async.index).to.have.keys(["@0", "@1", "@2"]);
+                expect(flexsearch_async.index).to.have.members(["@0", "@1", "@2"]);
 
                 done();
 
@@ -422,13 +460,12 @@ if(env !== "light"){
             flexsearch_async.add(3, false);
             flexsearch_async.add(3, []);
             flexsearch_async.add(3, {});
-            flexsearch_async.add(3, function(){
-            });
+            flexsearch_async.add(3, function(){});
 
             setTimeout(function(){
 
                 expect(flexsearch_async.length).to.equal(3);
-                expect(flexsearch_async.index).to.have.keys(["@0", "@1", "@2"]);
+                expect(flexsearch_async.index).to.have.members(["@0", "@1", "@2"]);
 
                 done();
 
@@ -437,6 +474,20 @@ if(env !== "light"){
     });
 
     describe("Search (Async)", function(){
+
+        it("Should have been matched from index", function(done){
+
+            var index = new FlexSearch({doc: {id: "id", field: "title"}});
+            var data = {id: 0, title: "foo"};
+
+            index.add(data);
+
+            index.search("foo", function(result){
+
+                expect(result).to.have.members([data]);
+                done();
+            });
+        });
 
         it("Should have been matched from index", function(done){
 
@@ -453,14 +504,9 @@ if(env !== "light"){
             flexsearch_async.search("foobar", function(result){
 
                 expect(result).to.include(1);
+
+                done();
             });
-
-            // (async function(){
-            //
-            //     expect(await flexsearch_async.search("foo")).to.have.members([0, 1]);
-            // })();
-
-            setTimeout(done, 25);
         });
 
         it("Should have been limited", function(done){
@@ -469,9 +515,9 @@ if(env !== "light"){
 
                 expect(result).to.include(0);
                 expect(result).to.not.include(1);
-            });
 
-            setTimeout(done, 25);
+                done();
+            });
         });
 
         it("Should not have been matched from index", function(done){
@@ -494,9 +540,9 @@ if(env !== "light"){
             flexsearch_async.search(" o ", function(result){
 
                 expect(result).to.have.lengthOf(0);
-            });
 
-            setTimeout(done, 25);
+                done();
+            });
         });
     });
 
@@ -507,24 +553,6 @@ if(env !== "light"){
             flexsearch_async.update(0, "bar");
             flexsearch_async.update(2, "foobar");
             flexsearch_async.update(1, "foo");
-
-            expect(flexsearch_async.length).to.equal(3);
-
-            flexsearch_async.search("foo").then(function(result){
-                expect(result).to.not.have.members([2, 1]);
-            });
-
-            flexsearch_async.search("bar").then(function(result){
-                expect(result).to.not.include(0);
-            });
-
-            flexsearch_async.search("bar").then(function(result){
-                expect(result).to.include(2);
-            });
-
-            flexsearch_async.search("foobar").then(function(result){
-                expect(result).to.not.include(2);
-            });
 
             setTimeout(function(){
 
@@ -544,9 +572,9 @@ if(env !== "light"){
 
                 flexsearch_async.search("foobar", function(result){
                     expect(result).to.include(2);
-                });
 
-                done();
+                    done();
+                });
 
             }, 25);
         });
@@ -581,9 +609,9 @@ if(env !== "light"){
 
                 flexsearch_async.search("foobar").then(function(result){
                     expect(result).to.include(2);
-                });
 
-                done();
+                    done();
+                });
 
             }, 25);
         });
@@ -593,31 +621,58 @@ if(env !== "light"){
 
         it("Should have been removed from the index", function(done){
 
-            flexsearch_async.remove(0);
-            flexsearch_async.remove(2);
-            flexsearch_async.remove(1);
+            var index = new FlexSearch();
+
+            index.add(0, "foo");
+
+            expect(index.length).to.equal(1);
+
+            index.remove(0, function(){
+
+                expect(index.length).to.equal(0);
+
+                done();
+            });
+
+            expect(index.length).to.equal(1);
+        });
+
+        it("Should have been removed from the index", function(done){
 
             expect(flexsearch_async.length).to.equal(3);
 
-            setTimeout(function(){
+            flexsearch_async.remove(0, function(){
 
-                expect(flexsearch_async.length).to.equal(0);
-
-                flexsearch_async.search("foo", function(result){
-                    expect(result).to.have.lengthOf(0);
-                });
-
-                flexsearch_async.search("bar", function(result){
-                    expect(result).to.have.lengthOf(0);
-                });
-
-                flexsearch_async.search("foobar", function(result){
-                    expect(result).to.have.lengthOf(0);
-                });
+                expect(flexsearch_async.length).to.equal(2);
 
                 done();
+            });
 
-            }, 25);
+            expect(flexsearch_async.length).to.equal(3);
+        });
+
+        it("Should have been removed from the index", function(done){
+
+            flexsearch_async.remove(2);
+            flexsearch_async.remove(1).then(function(){
+                expect(flexsearch_async.length).to.equal(0);
+            });
+
+            expect(flexsearch_async.length).to.equal(2);
+
+            flexsearch_async.search("foo", function(result){
+                expect(result).to.have.lengthOf(0);
+            });
+
+            flexsearch_async.search("bar", function(result){
+                expect(result).to.have.lengthOf(0);
+            });
+
+            flexsearch_async.search("foobar", function(result){
+                expect(result).to.have.lengthOf(0);
+
+                done();
+            });
         });
     });
 
@@ -625,176 +680,169 @@ if(env !== "light"){
 // Worker Tests
 // ------------------------------------------------------------------------
 
-    describe("Add (Worker)", function(){
+    if(typeof Worker !== "undefined" && !this._phantom){
 
-        it("Should support worker", function(){
+        describe("Add (Worker)", function(){
 
-            if(typeof Worker === "undefined"){
+            it("Should support worker", function(){
 
-                Worker = function(){};
+                flexsearch_worker = new FlexSearch({
 
-                Worker.prototype.postMessage = function(val){
-                    this.onmessage(val);
-                };
-                Worker.prototype.onmessage = function(val){
-                    return val;
-                };
-            }
+                    encode: "icase",
+                    tokenize: "reverse",
+                    async: false,
+                    worker: 4
+                });
+            });
 
-            flexsearch_worker = new FlexSearch({
+            it("Should have been added to the index", function(done){
 
-                encode: "icase",
-                tokenize: "strict",
-                async: false,
-                worker: 4
+                flexsearch_worker.add(0, "foo");
+                flexsearch_worker.add(2, "bar");
+                flexsearch_worker.add(1, "foobar");
+
+                setTimeout(function(){
+
+                    expect(flexsearch_worker.length).to.equal(3);
+                    expect(flexsearch_worker.index).to.have.members(["@0", "@1", "@2"]);
+
+                    flexsearch_worker.search("foo", function(result){
+
+                        expect(result).to.have.length(2);
+                        expect(result).to.have.members([0, 1]);
+
+                        done();
+                    });
+
+                }, 25);
+            });
+
+            it("Should not have been added to the index", function(done){
+
+                flexsearch_worker.add("foo");
+                flexsearch_worker.add(3);
+                flexsearch_worker.add(null, "foobar");
+                flexsearch_worker.add(void 0, "foobar");
+                flexsearch_worker.add(4, null);
+                flexsearch_worker.add(5, false);
+                flexsearch_worker.add(6, []);
+                flexsearch_worker.add(7, {});
+                flexsearch_worker.add(8, function(){
+                });
+
+                setTimeout(function(){
+
+                    expect(flexsearch_worker.length).to.equal(3);
+                    expect(flexsearch_worker.index).to.have.members(["@0", "@1", "@2"]);
+
+                    done();
+
+                }, 25);
             });
         });
 
-        it("Should have been added to the index", function(done){
+        describe("Search (Worker)", function(){
 
-            flexsearch_worker.add(0, "foo");
-            flexsearch_worker.add(2, "bar");
-            flexsearch_worker.add(1, "foobar");
+            it("Should have been matched from index", function(done){
 
-            expect(flexsearch_worker.length).to.equal(3);
-            expect(flexsearch_worker.index).to.have.keys(["@0", "@1", "@2"]);
+                flexsearch_worker.search("foo", function(result){
 
-            flexsearch_worker.search("foo", function(result){
+                    expect(result).to.have.lengthOf(2);
 
-                expect(result).to.have.length(0);
+                    flexsearch_worker.search("bar", function(result){
+
+                        expect(result).to.have.lengthOf(2);
+
+                        flexsearch_worker.search("foobar", function(result){
+
+                            expect(result).to.have.lengthOf(1);
+
+                            done();
+                        });
+                    });
+                });
             });
 
-            setTimeout(done, 25);
+            it("Should have been limited", function(done){
+
+                flexsearch_worker.search("foo", 1, function(result){
+
+                    expect(result).to.have.lengthOf(1);
+
+                    done();
+                });
+            });
+
+            it("Should not have been matched from index", function(done){
+
+                flexsearch_worker.search("barfoo", function(result){
+
+                    expect(result).to.have.lengthOf(0);
+
+                    flexsearch_worker.search("", function(result){
+
+                        expect(result).to.have.lengthOf(0);
+
+                        flexsearch_worker.search(" ", function(result){
+
+                            expect(result).to.have.lengthOf(0);
+
+                            flexsearch_worker.search(" o ", function(result){
+
+                                expect(result).to.have.lengthOf(1);
+
+                                flexsearch_worker.search(" fob ", function(result){
+
+                                    expect(result).to.have.lengthOf(0);
+
+                                    done();
+                                });
+                            });
+                        });
+                    });
+                });
+            });
         });
 
-        it("Should not have been added to the index", function(done){
+        describe("Update (Worker)", function(){
 
-            flexsearch_worker.add("foo");
-            flexsearch_worker.add(3);
-            flexsearch_worker.add(null, "foobar");
-            flexsearch_worker.add(void 0, "foobar");
-            flexsearch_worker.add(4, null);
-            flexsearch_worker.add(5, false);
-            flexsearch_worker.add(6, []);
-            flexsearch_worker.add(7, {});
-            flexsearch_worker.add(8, function(){});
+            it("Should have been updated to the index", function(done){
 
-            setTimeout(function(){
+                flexsearch_worker.update(0, "bar");
+                flexsearch_worker.update(2, "foobar");
+                flexsearch_worker.update(1, "foo", function(){
+
+                    expect(flexsearch_worker.length).to.equal(3);
+
+                    flexsearch_worker.search("foo", function(results){
+
+                        expect(results).to.have.members([2, 1]);
+
+                        flexsearch_worker.search("bar", function(results){
+
+                            expect(results).to.have.members([0, 2]);
+
+                            flexsearch_worker.search("foobar", function(results){
+
+                                expect(results).to.have.members([2]);
+
+                                done();
+                            });
+                        });
+                    });
+                });
+            });
+        });
+
+        describe("Remove (Worker)", function(){
+
+            it("Should have been removed from the index", function(done){
 
                 expect(flexsearch_worker.length).to.equal(3);
-                expect(flexsearch_worker.index).to.have.keys(["@0", "@1", "@2"]);
 
-                done();
-
-            }, 25);
-        });
-    });
-
-    describe("Search (Worker)", function(){
-
-        it("Should have been matched from index", function(done){
-
-            flexsearch_worker.search("foo", function(result){
-
-                expect(result).to.have.lengthOf(2);
-            });
-
-            flexsearch_worker.search("bar", function(result){
-
-                expect(result).to.have.lengthOf(2);
-            });
-
-            flexsearch_worker.search("foobar", function(result){
-
-                expect(result).to.have.lengthOf(1);
-            });
-
-            setTimeout(done, 25);
-        });
-
-        it("Should have been limited", function(done){
-
-            flexsearch_worker.search("foo", 1, function(result){
-
-                expect(result).to.include(0);
-                expect(result).to.not.include(1);
-            });
-
-            setTimeout(done, 25);
-        });
-
-        it("Should not have been matched from index", function(done){
-
-            flexsearch_worker.search("barfoo", function(result){
-
-                expect(result).to.have.lengthOf(0);
-            });
-
-            flexsearch_worker.search("", function(result){
-
-                expect(result).to.have.lengthOf(0);
-            });
-
-            flexsearch_worker.search(" ", function(result){
-
-                expect(result).to.have.lengthOf(0);
-            });
-
-            flexsearch_worker.search(" o ", function(result){
-
-                expect(result).to.have.lengthOf(0);
-            });
-
-            setTimeout(done, 25);
-        });
-    });
-
-    // TODO:
-    /*
-    describe("Update (Worker)", function(){
-
-        it("Should have been updated to the index", function(done){
-
-            flexsearch_worker.update(0, "bar");
-            flexsearch_worker.update(2, "foobar");
-            flexsearch_worker.update(1, "foo");
-
-            setTimeout(function(){
-
-                expect(flexsearch_worker.length).to.equal(3);
-
-                flexsearch_worker.search("foo", function(results){
-
-                    expect(results).to.have.members([2, 1]);
-                });
-
-                flexsearch_worker.search("bar", function(results){
-
-                    expect(results).to.have.members([0, 2]);
-                });
-
-                flexsearch_worker.search("foobar", function(results){
-
-                    expect(results).to.have.members([2]);
-                });
-
-                setTimeout(done, 25);
-            }, 25);
-        });
-    });
-    */
-
-    describe("Remove (Worker)", function(){
-
-        it("Should have been removed from the index", function(done){
-
-            expect(flexsearch_worker.length).to.equal(3);
-
-            flexsearch_worker.remove(0);
-            flexsearch_worker.remove(2);
-            flexsearch_worker.remove(1);
-
-            setTimeout(function(){
+                flexsearch_worker.remove(0);
+                flexsearch_worker.remove(2);
+                flexsearch_worker.remove(1);
 
                 expect(flexsearch_worker.length).to.equal(0);
 
@@ -802,31 +850,31 @@ if(env !== "light"){
 
                     expect(results).to.not.include(1);
                     expect(results).to.not.include(2);
+
+                    flexsearch_worker.search("bar", function(results){
+
+                        expect(results).to.not.include(0);
+                        expect(results).to.not.include(2);
+
+                        flexsearch_worker.search("foobar", function(results){
+
+                            expect(results).to.not.include(2);
+
+                            done();
+                        });
+                    });
                 });
-
-                flexsearch_worker.search("bar", function(results){
-
-                    expect(results).to.not.include(0);
-                    expect(results).to.not.include(2);
-                });
-
-                flexsearch_worker.search("foobar", function(results){
-
-                    expect(results).to.not.include(2);
-                });
-
-                setTimeout(done, 25);
-            }, 25);
-        });
-
-        if(env !== "light" && env !== "min"){
-
-            it("Should have been debug mode activated", function(){
-
-                flexsearch_worker.info();
             });
-        }
-    });
+
+            if((env !== "light") && (env !== "min")){
+
+                it("Should have been debug mode activated", function(){
+
+                    flexsearch_worker.info();
+                });
+            }
+        });
+    }
 
     describe("Worker Not Supported", function(){
 
@@ -840,11 +888,11 @@ if(env !== "light"){
             flexsearch_worker = new FlexSearch({
 
                 encode: false,
-                async: true,
+                async: false,
                 worker: 4
             });
 
-            if(env !== "min"){
+            if((env !== "min") && (env !== "pre")){
 
                 expect(flexsearch_worker.info().worker).to.equal(false);
             }
@@ -891,6 +939,79 @@ describe("Encoding", function(){
         FlexSearch.registerEncoder("custom", test_encoder);
 
         expect(FlexSearch.encode("custom", "Björn-Phillipp Mayer")).to.equal(flexsearch_custom.encode("Björn-Phillipp Mayer"));
+    });
+});
+
+// ------------------------------------------------------------------------
+// CJK Word Break
+// ------------------------------------------------------------------------
+
+describe("CJK Word Break", function(){
+
+    it("Should have been tokenized properly", function(){
+
+        var index = FlexSearch.create({
+            encode: false,
+            tokenize: function(str){
+                return str.replace(/[\x00-\x7F]/g, "").split("");
+            }
+        });
+
+        index.add(0, "서울시가 잠이 든 시간에 아무 말, 미뤄, 미뤄");
+
+        expect(index.search("든")).to.include(0);
+        expect(index.search("시간에")).to.include(0);
+
+        index.add(1, "一个单词");
+
+        expect(index.search("单词")).to.include(1);
+    });
+});
+
+// ------------------------------------------------------------------------
+// Cyrillic Word Break
+// ------------------------------------------------------------------------
+
+describe("Cyrillic Word Break", function(){
+
+    it("Should have been tokenized properly", function(){
+
+        var index = FlexSearch.create({
+            encode: false,
+            tokenize: function(str){
+                return str.replace(/[\x00-\x7F]/g, "").split("");
+            }
+        });
+
+        index.add(0, "Фообар");
+
+        expect(index.search("Фообар")).to.include(0);
+        expect(index.search("бар")).to.include(0);
+    });
+});
+
+// ------------------------------------------------------------------------
+// Right-To-Left
+// ------------------------------------------------------------------------
+
+describe("RTL Support", function(){
+
+    it("Should have been scored properly", function(){
+
+        var index = new FlexSearch({
+
+            encode: "icase",
+            tokenize: "reverse",
+            rtl: true
+        });
+
+        index.add(0, "54321 4 3 2 1 0");
+        index.add(1, "0 1 2 3 4 54321");
+        index.add(2, "0 1 2 3 4 12345");
+
+        expect(index.search("5")[0]).to.equal(2);
+        expect(index.search("5")[1]).to.equal(1);
+        expect(index.search("5")[2]).to.equal(0);
     });
 });
 
@@ -996,6 +1117,136 @@ describe("Options", function(){
 });
 
 // ------------------------------------------------------------------------
+// Filter Tests
+// ------------------------------------------------------------------------
+
+describe("Filter", function(){
+
+    it("Should have been filtered properly", function(){
+
+        var index = new FlexSearch({
+            encode: "icase",
+            tokenize: "strict",
+            filter: ["in", "the"]
+        });
+
+        index.add(0, "Today in the morning.");
+
+        expect(index.length).to.equal(1);
+        expect(index.search("today in the morning.")).to.include(0);
+        expect(index.search("today morning")).to.include(0);
+        expect(index.search("in the")).to.have.length(0);
+    });
+
+    it("Should have been filtered properly (custom function)", function(){
+
+        var index = new FlexSearch({
+            encode: "icase",
+            tokenize: "strict",
+            filter: function(word){
+                return word.length > 3;
+            }
+        });
+
+        index.add(0, "Today in the morning.");
+
+        expect(index.length).to.equal(1);
+        expect(index.search("today in the morning.")).to.include(0);
+        expect(index.search("today morning")).to.include(0);
+        expect(index.search("in the")).to.have.length(0);
+    });
+});
+
+describe("Stemmer", function(){
+
+    it("Should have been stemmed properly", function(){
+
+        var index = new FlexSearch({
+            encode: "icase",
+            tokenize: "reverse",
+            stemmer: {
+                "ization": "ize",
+                "tional": "tion"
+            }
+        });
+
+        index.add(0, "Just a multinational colonization.");
+
+        expect(index.length).to.equal(1);
+        expect(index.search("Just a multinational colonization.")).to.include(0);
+        expect(index.search("multinational colonization")).to.include(0);
+        expect(index.search("tional tion")).to.have.length(0);
+    });
+
+    it("Should have been stemmed properly (custom function)", function(){
+
+        var stems = {
+            "ization": "ize",
+            "tional": "tion"
+        };
+
+        var index = new FlexSearch({
+            encode: "icase",
+            tokenize: "strict",
+            stemmer: function(word){
+                return stems[word] || word;
+            }
+        });
+
+        index.add(0, "Just a multinational colonization.");
+
+        expect(index.length).to.equal(1);
+        expect(index.search("Just a multinational colonization.")).to.include(0);
+        expect(index.search("multinational colonization")).to.include(0);
+        expect(index.search("tional tion")).to.have.length(0);
+    });
+});
+
+
+describe("Custom Language", function(){
+
+    it("Should have been applied properly", function(){
+
+        FlexSearch.registerLanguage("custom", {
+            filter: ["a", "an"],
+            stemmer: {
+                "ization": "ize",
+                "tional": "tion"
+            }
+        });
+
+        var index = new FlexSearch({
+            encode: "icase",
+            tokenize: "reverse",
+            filter: "custom",
+            stemmer: "custom"
+        });
+
+        index.add(0, "Just a multinational colonization.");
+
+        expect(index.length).to.equal(1);
+        expect(index.search("Just a multinational colonization.")).to.include(0);
+        expect(index.search("Just an multinational colonization.")).to.include(0);
+        expect(index.search("multinational colonization")).to.include(0);
+        expect(index.search("tional tion")).to.have.length(0);
+
+        index = new FlexSearch({
+            encode: "icase",
+            tokenize: "reverse",
+            lang: "custom"
+        });
+
+        index.add(0, "Just a multinational colonization.");
+
+        expect(index.length).to.equal(1);
+        expect(index.search("Just a multinational colonization.")).to.include(0);
+        expect(index.search("Just an multinational colonization.")).to.include(0);
+        expect(index.search("multinational colonization")).to.include(0);
+        expect(index.search("tional tion")).to.have.length(0);
+    });
+});
+
+// ------------------------------------------------------------------------
 // Relevance Tests
 // ------------------------------------------------------------------------
 
@@ -1017,7 +1268,7 @@ describe("Relevance", function(){
         expect(index.search("one two")).to.have.members([1, 2]);
         expect(index.search("four one")).to.have.members([1, 2]);
 
-        var index = new FlexSearch({
+        index = new FlexSearch({
             encode: "advanced",
             tokenize: "strict",
             threshold: 5,
@@ -1033,9 +1284,9 @@ describe("Relevance", function(){
         expect(index.search("one two")).to.have.members([1, 2]);
         expect(index.search("four one")).to.have.members([1, 2]);
 
-        var index = new FlexSearch({
+        index = new FlexSearch({
             encode: "extra",
-            tokenize: "ngram",
+            tokenize: "strict",
             threshold: 5,
             depth: 3
         });
@@ -1058,31 +1309,1480 @@ describe("Relevance", function(){
 // Suggestion Tests
 // ------------------------------------------------------------------------
 
-if(env !== "light"){
+if(env !== "light") describe("Suggestions", function(){
 
-    describe("Suggestion", function(){
+    it("Should have been suggested properly by relevance", function(){
 
-        it("Should have been suggested properly by relevance", function(){
-
-            var index = new FlexSearch({
-                encode: "advanced",
-                tokenize: "strict",
-                suggest: true
-            });
-
-            index.add(0, "1 2 3 2 4 1 5 3");
-            index.add(1, "zero one two three four five six seven eight nine ten");
-            index.add(2, "four two zero one three ten five seven eight six nine");
-
-            expect(index.search("1 3 4 7")).to.have.members([0]);
-            expect(index.search("1 3 9 7")).to.have.members([0]);
-            expect(index.search("one foobar two")).to.have.members([1, 2]);
-            expect(index.search("zero one foobar two foobar")).to.have.members([1, 2]);
-            //TODO
-            //expect(index.search("zero one foobar two foobar")[0]).to.equal(1);
+        var index = new FlexSearch({
+            encode: "advanced",
+            tokenize: "strict"
         });
+
+        index.add(0, "1 2 3 2 4 1 5 3");
+        index.add(1, "zero one two three four five six seven eight nine ten");
+        index.add(2, "four two zero one three ten five seven eight six nine");
+
+        expect(index.search("1 3 4 7", { suggest: false })).to.have.lengthOf(0);
+        expect(index.search("1 3 4 7", { suggest: true })).to.have.members([0]);
+        expect(index.search("1 3 9 7", { suggest: true })).to.have.members([0]);
+
+        expect(index.search("foobar one two", { suggest: true })).to.have.members([1, 2]);
+        expect(index.search("one foobar two", { suggest: true })).to.have.members([1, 2]);
+        expect(index.search("one two foobar", { suggest: true })).to.have.members([1, 2]);
+        expect(index.search("zero one foobar two foobar", { suggest: true })).to.have.members([1, 2]);
     });
-}
+
+    it("Should have been suggested properly by context", function(){
+
+        var index = new FlexSearch({
+            encode: "advanced",
+            tokenize: "strict",
+            depth: 3
+        });
+
+        index.add(1, "zero one two three four five six seven eight nine ten");
+        index.add(2, "four two zero one three ten five seven eight six nine");
+
+        expect(index.search("foobar one", { suggest: true })).to.have.members([1, 2]);
+        expect(index.search("foobar foobar foobar one foobar foobar foobar", { suggest: true })).to.have.members([1, 2]);
+        expect(index.search("foobar one two", { suggest: true })).to.have.members([1, 2]);
+        expect(index.search("one foobar two", { suggest: true })).to.have.members([1, 2]);
+        expect(index.search("one two foobar", { suggest: true })).to.have.members([1, 2]);
+        expect(index.search("foobar one foobar two foobar", { suggest: true })).to.have.members([1, 2]);
+        expect(index.search("zero one foobar two foobar", { suggest: true })).to.have.members([1, 2]);
+    });
+});
+
+// ------------------------------------------------------------------------
+// Where Clause
+// ------------------------------------------------------------------------
+
+if((env === "") || (env === "min") || (env === "pre")) describe("Where/Find", function(){
+
+    var data = [{
+        id: 0,
+        title: "Title 1",
+        cat: "1",
+        flag: false
+    },{
+        id: 1,
+        title: "Title 2",
+        cat: "2",
+        flag: false
+    },{
+        id: 2,
+        title: "Title 3",
+        cat: "1",
+        flag: true
+    }];
+
+    it("Should have been found properly", function(){
+
+        var index = new FlexSearch({
+            doc: {
+                id: "id",
+                field: ["title"]
+            }
+        });
+
+        index.add(data);
+
+        expect(index.length).to.equal(3);
+        expect(index.index).to.have.members(["@0", "@1", "@2"]);
+
+        expect(index.find(0)).to.equal(data[0]);
+        expect(index.find("id", 0)).to.equal(data[0]);
+        expect(index.where("id", 0)).to.have.members([data[0]]);
+        expect(index.find(function(val){return val.id === 0;})).to.equal(data[0]);
+
+        expect(index.find({id: 1})).to.equal(data[1]);
+        expect(index.where({id: 1})).to.have.members([data[1]]);
+        expect(index.where(function(val){return val.id === 1;})).to.have.members([data[1]]);
+
+        expect(index.find({cat: "1"})).to.equal(data[0]);
+        expect(index.find({cat: "2"})).to.equal(data[1]);
+        expect(index.find({cat: "2", flag: true})).to.equal(null);
+        expect(index.find(data[2])).to.equal(data[2]);
+        expect(index.where(data[2])).to.have.members([data[2]]);
+
+        expect(index.where({cat: "1"})).to.have.members([data[0], data[2]]);
+        expect(index.search("title", {sort: "cat"})[1]).to.equal(data[2]);
+        expect(index.search("title")).to.have.members(data);
+
+        expect(index.search("title", {
+            where: {
+                cat: "1"
+            }
+        })).to.have.members([data[0], data[2]]);
+
+        expect(index.search("title", {
+            where: {
+                cat: "1",
+                flag: true
+            }
+        })).to.have.members([data[2]]);
+    });
+
+    it("Should have been tagged properly", function(){
+
+        var index = new FlexSearch({
+            doc: {
+                id: "id",
+                field: "title",
+                tag : "cat"
+            }
+        });
+
+        index.add(data);
+
+        expect(index.length).to.equal(3);
+        expect(index.index).to.have.members(["@0", "@1", "@2"]);
+
+        expect(index.where({cat: "1"})).to.have.members([data[0], data[2]]);
+        expect(index.where("cat", "1")).to.have.members([data[0], data[2]]);
+        expect(index.where("cat", "1", 1)).to.have.members([data[0]]);
+
+        expect(index.where({
+            cat: "1",
+            flag: true
+        })).to.have.members([data[2]]);
+
+        expect(index.where({
+            flag: true,
+            cat: "1"
+        })).to.have.members([data[2]]);
+
+        expect(index.search("title", {
+            where: {
+                cat: "1"
+            }
+        })).to.have.members([data[0], data[2]]);
+
+        expect(index.search("title", {
+            where: {
+                cat: "1"
+            },
+            limit: 1
+        })).to.have.members([data[0]]);
+
+        expect(index.search("title", {
+            where: {
+                cat: "3"
+            }
+        })).to.have.lengthOf(0);
+
+        expect(index.search("foobar", {
+            where: {
+                cat: "1"
+            }
+        })).to.have.lengthOf(0);
+
+        // -----------------------------------------
+
+        index = new FlexSearch({
+            doc: {
+                id: "id",
+                field: ["title"],
+                tag : ["cat"]
+            }
+        });
+
+        index.add(data);
+
+        expect(index.length).to.equal(3);
+        expect(index.index).to.have.members(["@0", "@1", "@2"]);
+
+        expect(index.where({cat: "1"})).to.have.members([data[0], data[2]]);
+
+        expect(index.search("title", {
+            where: {
+                cat: "1"
+            }
+        })).to.have.members([data[0], data[2]]);
+
+        expect(index.search("title", {
+            where: {
+                cat: "3"
+            }
+        })).to.have.lengthOf(0);
+
+        expect(index.search("foobar", {
+            where: {
+                cat: "1"
+            }
+        })).to.have.lengthOf(0);
+
+        // ------------------------------------
+
+        index = new FlexSearch({
+            doc: {
+                id: "id",
+                field: "data:title",
+                tag : "data:cat"
+            }
+        });
+
+        data = [{
+            id: 0,
+            data: {
+                title: "Title 1",
+                cat: "1",
+                flag: false
+            }
+        },{
+            id: 1,
+            data: {
+                title: "Title 2",
+                cat: "2",
+                flag: false
+            }
+        },{
+            id: 2,
+            data: {
+                title: "Title 3",
+                cat: "1",
+                flag: true
+            }
+        }];
+
+        index.add(data);
+
+        expect(index.where({"data:cat": "1"})).to.have.members([data[0], data[2]]);
+        expect(index.where("data:cat", "1")).to.have.members([data[0], data[2]]);
+        expect(index.where("data:cat", "1", 1)).to.have.members([data[0]]);
+
+        expect(index.where({
+            "data:cat": "1",
+            "data:flag": true
+        })).to.have.members([data[2]]);
+
+        expect(index.where({
+            "data:flag": true,
+            "data:cat": "1"
+        })).to.have.members([data[2]]);
+    });
+});
+
+// ------------------------------------------------------------------------
+//  Multi-Field Documents
+// ------------------------------------------------------------------------
+
+if(env !== "light") describe("Index Multi-Field Documents", function(){
+
+    var data = [{
+
+        id: 2,
+        data:{
+            title: "Title 3",
+            body: "Body 3"
+        }
+    },{
+        id: 1,
+        data:{
+            title: "Title 2",
+            body: "Body 2"
+        }
+    },{
+        id: 0,
+        data:{
+            title: "Title 1",
+            body: "Body 1"
+        }
+    }];
+
+    var update = [{
+
+        id: 0,
+        data:{
+            title: "Foo 1",
+            body: "Bar 1"
+        }
+    },{
+        id: 1,
+        data:{
+            title: "Foo 2",
+            body: "Bar 2"
+        }
+    },{
+        id: 2,
+        data:{
+            title: "Foo 3",
+            body: "Bar 3"
+        }
+    }];
+
+    it("Should have been indexed properly", function(){
+
+        var index = new FlexSearch({
+
+            doc: {
+
+                id: "id",
+                field: [
+                    "data:title",
+                    "data:body"
+                ]
+            }
+        });
+
+        index.add(data);
+
+        if(env === ""){
+
+            expect(index.doc.index["data:title"].length).to.equal(3);
+            expect(index.doc.index["data:body"].length).to.equal(3);
+        }
+
+        expect(index.search({field: "data:body", query: "body"})).to.have.members(data);
+        expect(index.search({field: "data:title", query: "title"})).to.have.members(data);
+
+        expect(index.search({field: "data:body", query: "title"})).to.have.lengthOf(0);
+        expect(index.search({field: "data:title", query: "body"})).to.have.lengthOf(0);
+
+        expect(index.search({field: "data:body", query: "body"})).to.have.members(data);
+        expect(index.search({field: ["data:title"], query: "title"})).to.have.members(data);
+
+        expect(index.search({field: ["data:title", "data:body"], query: "body"})).to.have.lengthOf(3);
+        expect(index.search({field: ["data:body", "data:title"], query: "title"})).to.have.lengthOf(3);
+        expect(index.search({field: ["data:title", "data:body"], query: "body"})).to.have.members(data);
+        expect(index.search({field: ["data:body", "data:title"], query: "title"})).to.have.members(data);
+
+        expect(index.search({field: ["data:title", "data:body"], query: "body", bool: "and"})).to.have.lengthOf(0);
+        expect(index.search({field: ["data:body", "data:title"], query: "title", bool: "and"})).to.have.lengthOf(0);
+        expect(index.search({field: ["data:title", "data:body"], query: "body", bool: "or"})).to.have.members(data);
+        expect(index.search({field: ["data:body", "data:title"], query: "title", bool: "or"})).to.have.members(data);
+
+        expect(index.search("body", {field: "data:body"})).to.have.members(data);
+        expect(index.search("title", {field: ["data:title"]})).to.have.members(data);
+
+        expect(index.search({query: "body", bool: "or"})).to.have.members(data);
+        expect(index.search("title", {bool: "or"})).to.have.members(data);
+
+        expect(index.search({
+
+            field: "data:title",
+            query: "title"
+
+        })).to.have.members(data);
+
+        expect(index.search([{
+
+            field: "data:title",
+            query: "body",
+            bool: "or"
+        },{
+            field: "data:body",
+            query: "body",
+            bool: "or"
+
+        }])).to.have.members(data);
+
+        expect(index.search("title", {
+
+            field: "data:title"
+
+        })).to.have.members(data);
+
+        expect(index.search("title", {
+
+            field: "data:body"
+
+        })).to.have.lengthOf(0);
+
+        expect(index.search("body", [{
+
+            field: "data:title",
+            bool: "or"
+        },{
+            field: "data:body",
+            bool: "or"
+
+        }])).to.have.members(data);
+
+        index.update(update);
+
+        expect(index.search("foo", {bool: "or"})).not.to.have.members(data);
+        expect(index.search("bar", {bool: "or"})).not.to.have.members(data);
+        expect(index.search("foo", {bool: "or"})).to.have.members(update);
+        expect(index.search("bar", {bool: "or"})).to.have.members(update);
+
+        expect(index.search("foo", {field: "data:title"})).not.to.have.members(data);
+        expect(index.search("bar", {field: "data:body"})).not.to.have.members(data);
+        expect(index.search("foo", {field: "data:title"})).to.have.members(update);
+        expect(index.search("bar", {field: "data:body"})).to.have.members(update);
+
+        index.remove(update);
+
+        if(env === ""){
+
+            expect(index.doc.index["data:title"].length).to.equal(0);
+            expect(index.doc.index["data:body"].length).to.equal(0);
+        }
+    });
+
+    it("Should have been indexed properly (custom fields)", function(){
+
+        var index = new FlexSearch({
+
+            doc: {
+
+                id: "id",
+                field: {
+                    "data:title": {
+                        encode: "advanced",
+                        tokenize: "reverse"
+                    },
+                    "data:body": {
+                        encode: "icase",
+                        tokenize: "strict"
+                    }
+                }
+            }
+        });
+
+        index.add(data);
+
+        if(env === ""){
+
+            expect(index.doc.index["data:title"].length).to.equal(3);
+            expect(index.doc.index["data:body"].length).to.equal(3);
+        }
+
+        expect(index.search({field: "data:body", query: "body"})).to.have.members(data);
+        expect(index.search({field: "data:title", query: "tle"})).to.have.members(data);
+
+        expect(index.search({field: "data:body", query: "title"})).to.have.lengthOf(0);
+        expect(index.search({field: "data:title", query: "body"})).to.have.lengthOf(0);
+
+        expect(index.search({field: ["data:title", "data:body"], query: "body", bool: "or"})).to.have.members(data);
+        expect(index.search({field: ["data:body", "data:title"], query: "tle", bool: "or"})).to.have.members(data);
+
+        expect(index.search({field: ["data:body"], query: "body", bool: "or"})).to.have.members(data);
+        expect(index.search({field: "data:title", query: "tle", bool: "or"})).to.have.members(data);
+
+        expect(index.search({query: "body", bool: "or"})).to.have.members(data);
+        expect(index.search("tle", {bool: "or"})).to.have.members(data);
+
+        expect(index.search({query: "body", field: "data:body"})).to.have.members(data);
+        expect(index.search("tle", {field: "data:title"})).to.have.members(data);
+
+        expect(index.search({
+
+            field: "data:title",
+            query: "tle"
+
+        })).to.have.members(data);
+
+        expect(index.search([{
+
+            field: "data:title",
+            query: "body",
+            bool: "or"
+        },{
+            field: "data:body",
+            query: "body",
+            bool: "or"
+
+        }])).to.have.members(data);
+
+        expect(index.search("tle", {
+
+            field: "data:title"
+
+        })).to.have.members(data);
+
+        expect(index.search("tle", {
+
+            field: "data:body"
+
+        })).to.have.lengthOf(0);
+
+        expect(index.search("body", [{
+
+            field: "data:title",
+            bool: "or"
+        },{
+            field: "data:body",
+            bool: "or"
+
+        }])).to.have.members(data);
+
+        index.update(update);
+
+        expect(index.search("foo", {bool: "or"})).not.to.have.members(data);
+        expect(index.search("bar", {bool: "or"})).not.to.have.members(data);
+        expect(index.search("foo", {bool: "or"})).to.have.members(update);
+        expect(index.search("bar", {bool: "or"})).to.have.members(update);
+
+        expect(index.search("foo", {field: "data:title"})).not.to.have.members(data);
+        expect(index.search("bar", {field: "data:body"})).not.to.have.members(data);
+        expect(index.search("foo", {field: "data:title"})).to.have.members(update);
+        expect(index.search("bar", {field: "data:body"})).to.have.members(update);
+
+        index.remove(update);
+
+        if(env === ""){
+
+            expect(index.doc.index["data:title"].length).to.equal(0);
+            expect(index.doc.index["data:body"].length).to.equal(0);
+        }
+    });
+
+    it("Should have been unique results", function(){
+
+        var index = new FlexSearch({
+            doc: {
+                id: "id",
+                field: ["field1", "field2"]
+            }
+        });
+
+        var docs = [{
+            id: 1,
+            field1: "phrase",
+            field2: "phrase"
+        }];
+
+        index.add(docs);
+
+        expect(index.search("phrase")).to.have.lengthOf(1);
+        expect(index.search("phrase")).to.have.members(docs);
+    });
+
+    /*
+    it("Should have been indexed properly (tag)", function(){
+
+        var index = new FlexSearch({
+
+            doc: {
+
+                id: "id",
+                field: "data:body",
+                tag: "data:title"
+            }
+        });
+
+        index.add(data);
+
+        expect(index.doc.index[0].length).to.equal(3);
+        expect(index.doc.index[1].length).to.equal(3);
+
+        expect(index.search({field: "data:body", query: "body"})).to.have.members(data);
+        expect(index.search({field: "data:title", query: "title"})).to.have.lengthOf(0);
+        expect(index.search({field: "data:title", query: "Title 1"})).to.have.members(data[0]);
+
+        expect(index.search({field: "data:body", query: "title"})).to.have.lengthOf(0);
+        expect(index.search({field: "data:title", query: "body"})).to.have.lengthOf(0);
+
+        expect(index.search({field: ["data:title", "data:body"], query: "body"})).to.have.members(data);
+        expect(index.search({field: ["data:body", "data:title"], query: "title"})).to.have.members(data);
+
+        expect(index.search({query: "body"})).to.have.members(data);
+        expect(index.search("title")).to.have.members(data);
+
+        expect(index.search({
+
+            field: "data:title",
+            query: "title",
+            boost: 2
+
+        })).to.have.members(data);
+
+        expect(index.search([{
+
+            field: "data:title",
+            query: "body",
+            boost: 2
+        },{
+            field: "data:body",
+            query: "body",
+            boost: 2
+
+        }])).to.have.members(data);
+
+        expect(index.search("title", {
+
+            field: "data:title",
+            boost: 2
+
+        })).to.have.members(data);
+
+        expect(index.search("title", {
+
+            field: "data:body",
+            boost: 2
+
+        })).to.have.lengthOf(0);
+
+        expect(index.search("body", [{
+
+            field: "data:title",
+            boost: 2
+        },{
+            field: "data:body",
+            boost: 2
+
+        }])).to.have.members(data);
+
+        index.update(update);
+
+        expect(index.search("foo")).not.to.have.members(data);
+        expect(index.search("bar")).not.to.have.members(data);
+        expect(index.search("foo")).to.have.members(update);
+        expect(index.search("bar")).to.have.members(update);
+
+        index.remove(update);
+
+        expect(index.doc.index[0].length).to.equal(0);
+        expect(index.doc.index[1].length).to.equal(0);
+    });
+    */
+
+    /*
+    it("Should have been boosted properly", function(){
+
+        var index = new FlexSearch({
+
+            tokenize: "strict",
+            depth: 3,
+            doc: {
+                id: "id",
+                field: ["title", "body"]
+            }
+        });
+
+        index.add([{
+
+            id: 0,
+            title: "1 2 3 4 5",
+            body: "1 2 3 4 5"
+        },{
+            id: 1,
+            title: "1 2 3 4 5",
+            body: "1 2 5 4 3" // <-- body
+        },{
+            id: 2,
+            title: "1 2 5 4 3", // <-- title
+            body: "1 2 3 4 5"
+        }]);
+
+        expect(index.search([{
+
+            field: "title",
+            query: "5",
+            boost: 0.1
+        },{
+            field: "body",
+            query: "5",
+            boost: 9
+
+        }])[0].id).to.equal(1);
+
+        expect(index.search([{
+
+            field: "title",
+            query: "5",
+            boost: 9
+        },{
+            field: "body",
+            query: "5",
+            boost: 0.1
+
+        }])[0].id).to.equal(2);
+    });
+    */
+
+    it("Should have been sorted properly", function(){
+
+        var index = new FlexSearch({
+
+            doc: {
+                id: "id",
+                field: "data:title"
+            }
+        });
+
+        index.add(data);
+
+        var results = index.search({
+
+            field: "data:title",
+            query: "title"
+        });
+
+        expect(results[0]).to.equal(data[0]);
+        expect(results[1]).to.equal(data[1]);
+        expect(results[2]).to.equal(data[2]);
+
+        results = index.search({
+
+            query: "title",
+            field: "data:title",
+            sort: function(a, b){
+
+                const diff = a.id - b.id;
+                return (diff < 0 ? -1 : (diff ? 1 : 0));
+            }
+        });
+
+        expect(results[0]).to.equal(data[2]);
+        expect(results[1]).to.equal(data[1]);
+        expect(results[2]).to.equal(data[0]);
+
+        results = index.search({
+
+            query: "title",
+            field: "data:title",
+            sort: "id"
+        });
+
+        expect(results[0]).to.equal(data[2]);
+        expect(results[1]).to.equal(data[1]);
+        expect(results[2]).to.equal(data[0]);
+
+        results = index.search({
+
+            query: "title",
+            field: "data:title",
+            sort: "data:title"
+        });
+
+        expect(results[0]).to.equal(data[2]);
+        expect(results[1]).to.equal(data[1]);
+        expect(results[2]).to.equal(data[0]);
+    });
+
+    it("Should have been sorted suggested and paged", function(){
+
+        var index = new FlexSearch({
+
+            doc: {
+                id: "id",
+                field: ["data:title", "data:body"]
+            }
+        });
+
+        index.add(data);
+
+        var results = index.search({
+
+            field: "data:title",
+            query: "title",
+            suggest: true,
+            page: true,
+            limit: 2
+        });
+
+        expect(results.result).to.have.members([data[0], data[1]]);
+
+        results = index.search({
+
+            field: "data:title",
+            query: "title",
+            suggest: true,
+            page: results.next,
+            limit: 2
+        });
+
+        expect(results.result).to.have.members([data[2]]);
+
+        results = index.search({
+
+            field: "data:title",
+            query: "foobar title foobar title foobar",
+            suggest: true,
+            page: true,
+            limit: 2
+        });
+
+        expect(results.result).to.have.members([data[0], data[1]]);
+
+        results = index.search({
+
+            field: "data:title",
+            query: "foobar title foobar title foobar",
+            suggest: true,
+            page: results.next,
+            limit: 2
+        });
+
+        expect(results.result).to.have.members([data[2]]);
+
+        results = index.search([{
+
+            field: "data:title",
+            query: "title undefined",
+            bool: "and",
+            suggest: true,
+            limit: 2
+        },{
+            field: "data:body",
+            query: "undefined",
+            bool: "not"
+        }]);
+
+        expect(results).to.have.members([data[0], data[1]]);
+    });
+
+    if((!env || (env === "pre")) && (typeof require !== "undefined") && !this._phantom){
+
+        require("./test.es6.js");
+    }
+});
+
+if(env !== "light") describe("Pagination", function(){
+
+    it("Should have been properly paged", function(){
+
+        var index = new FlexSearch();
+
+        index.add(0, "test").add(1, "test").add(2, "test").add(3, "test").add(4, "test");
+
+        expect(index.index).to.have.members(["@0", "@1", "@2", "@3", "@4"]);
+        expect(index.search("test")).to.have.lengthOf(5);
+        expect(index.search("test", 2)).to.have.lengthOf(2);
+
+        expect(index.search("test", {
+            page: true,
+            limit: 2
+        })).to.have.keys(["page", "next", "result"]);
+
+        var result = index.search("test", {
+            page: true,
+            limit: 2
+        });
+
+        expect(result.result).to.have.members([0, 1]);
+
+        result = index.search("test", {
+            page: result.next,
+            limit: 2
+        });
+
+        expect(result.result).to.have.members([2, 3]);
+
+        result = index.search("test", {
+            page: result.page,
+            limit: 2
+        });
+
+        expect(result.result).to.have.members([2, 3]);
+
+        result = index.search("test", {
+            page: result.next,
+            limit: 2
+        });
+
+        expect(result.result).to.have.members([4]);
+    });
+
+    it("Should have been properly paged (suggestion)", function(){
+
+        var index = new FlexSearch();
+
+        index.add(0, "foo bar").add(1, "foo bar").add(2, "foo bar test").add(3, "foo bar").add(4, "foo bar");
+
+        expect(index.index).to.have.members(["@0", "@1", "@2", "@3", "@4"]);
+        expect(index.search("foo")).to.have.lengthOf(5);
+        expect(index.search("foo", 2)).to.have.lengthOf(2);
+
+        var result = index.search("foo undefined bar", {
+            suggest: true,
+            page: true,
+            limit: 2
+        });
+
+        expect(result).to.have.keys(["page", "next", "result"]);
+        expect(result.result).to.have.members([0, 1]);
+
+        result = index.search("foo bar test", {
+            suggest: true,
+            page: true,
+            limit: 2
+        });
+
+        expect(result.result).to.have.members([2, 0]);
+
+        result = index.search("foo undefined bar", {
+            suggest: true,
+            page: true,
+            limit: 2
+        });
+
+        expect(result.result).to.have.members([0, 1]);
+
+        result = index.search("foo undefined bar", {
+            suggest: true,
+            page: result.next,
+            limit: 2
+        });
+
+        expect(result.result).to.have.members([2, 3]);
+
+        result = index.search("foo undefined bar", {
+            suggest: true,
+            page: result.page,
+            limit: 2
+        });
+
+        expect(result.result).to.have.members([2, 3]);
+
+        result = index.search("foo undefined bar", {
+            suggest: true,
+            page: result.next,
+            limit: 2
+        });
+
+        expect(result.result).to.have.members([4]);
+    });
+
+    it("Should have been properly paged (documents)", function(){
+
+        var data = [{
+            id: 0,
+            title: "Title 1",
+            body: "Body 1"
+        },{
+            id: 1,
+            title: "Title 2",
+            body: "Body 2"
+        },{
+            id: 2,
+            title: "Title 3",
+            body: "Body 3"
+        },{
+            id: 3,
+            title: "Title 4",
+            body: "Body 4"
+        },{
+            id: 4,
+            title: "Title 5",
+            body: "Body 5"
+        }];
+
+        var index = new FlexSearch({
+            doc: {
+                id: "id",
+                field: ["title", "body"]
+            }
+        });
+
+        index.add(data);
+
+        if(env === ""){
+
+            expect(index.doc.index["title"].index).to.have.members(["@0", "@1", "@2", "@3", "@4"]);
+            expect(index.doc.index["body"].index).to.have.members(["@0", "@1", "@2", "@3", "@4"]);
+        }
+
+        expect(index.search("title")).to.have.lengthOf(5);
+        expect(index.search("title", 2)).to.have.lengthOf(2);
+
+        expect(index.search("title", {
+            page: true,
+            limit: 2
+        })).to.have.keys(["page", "next", "result"]);
+
+        var result = index.search("title", {
+            page: true,
+            limit: 2
+        });
+
+        expect(result.result).to.have.members([data[0], data[1]]);
+
+        result = index.search("title", {
+            page: result.next,
+            limit: 2
+        });
+
+        expect(result.result).to.have.members([data[2], data[3]]);
+
+        result = index.search("title", {
+            page: result.page,
+            limit: 2
+        });
+
+        expect(result.result).to.have.members([data[2], data[3]]);
+
+        result = index.search("title", {
+            page: result.next,
+            limit: 2
+        });
+
+        expect(result.result).to.have.members([data[4]]);
+    });
+});
+
+describe("Custom Split", function(){
+
+    it("Should have been split properly", function(){
+
+        var index = FlexSearch.create({
+            encode: false,
+            split: /\s+/,
+            tokenize: "reverse"
+        });
+
+        index.add(0, "Фообар");
+
+        expect(index.search("Фообар")).to.include(0);
+        expect(index.search("бар")).to.include(0);
+        expect(index.search("Фоо")).to.include(0);
+    });
+});
+
+describe("Github Issues", function(){
+
+    if(env !== "light") it("#48", function(){
+
+        const fs = new FlexSearch({
+            encode: "extra",
+            tokenize: "full",
+            threshold: 1,
+            depth: 4,
+            resolution: 9,
+            async: false,
+            worker: 1,
+            cache: true,
+            suggest: true,
+            doc: {
+                id: "id",
+                field: [ "intent", "text" ]
+            }
+        });
+
+        const doc = [{
+            id: 0,
+            intent: "intent",
+            text: "text"
+        },{
+            id: 1,
+            intent: "intent",
+            text: "howdy - how are you doing"
+        }];
+
+        fs.add(doc);
+
+        expect(fs.search("howdy", { bool: "or" })).to.have.members([doc[1]]);
+        expect(fs.search("howdy -", { bool: "or" })).to.have.members([doc[1]]);
+    });
+
+    if(env !== "light") it("#54", function(){
+
+        var docs = [{
+            id: 1,
+            title: "Roaming Inquiry",
+            content: "Some content"
+        }, {
+            id: 2,
+            title: "New Service",
+            content: "This is not roaming-inquiry"
+        }];
+
+        var index = new FlexSearch({
+            doc: {
+                id: "id",
+                field: ["title", "content"]
+            }
+        });
+
+        index.add(docs);
+
+        expect(index.search("roaming")).to.have.members([docs[0], docs[1]]);
+    });
+});
+
+if(env !== "light") describe("Operators", function(){
+
+    var data = [{
+        id: 2,
+        title: "Title 3",
+        body: "Body 3",
+        blacklist: "x1"
+    },{
+        id: 1,
+        title: "Title 2",
+        body: "Body 2",
+        blacklist: "x2"
+    },{
+        id: 0,
+        title: "Title 1",
+        body: "Body 1",
+        blacklist: "x3"
+    }];
+
+    var index = new FlexSearch({
+        doc: {
+            id: "id",
+            field: ["title", "body", "blacklist"]
+        }
+    });
+
+    it("Should have been properly applied logic", function(){
+
+        index.add(data);
+
+        expect(index.search([{
+            field: "title",
+            query: "title",
+            bool: "and"
+        },{
+            field: "body",
+            query: "body",
+            bool: "and"
+        },{
+            field: "blacklist",
+            query: "xxx",
+            bool: "not"
+        }])).to.have.members(data);
+
+        expect(index.search([{
+            field: "title",
+            query: "title",
+            bool: "and"
+        },{
+            field: "body",
+            query: "title",
+            bool: "and"
+        },{
+            field: "blacklist",
+            query: "xxx",
+            bool: "not"
+        }])).to.have.length(0);
+
+        expect(index.search([{
+            field: "title",
+            query: "title",
+            bool: "and"
+        },{
+            field: "body",
+            query: "title",
+            bool: "or"
+        },{
+            field: "blacklist",
+            query: "xxx",
+            bool: "not"
+        }])).to.have.members(data);
+
+        expect(index.search([{
+            field: "title",
+            query: "title",
+            bool: "and"
+        },{
+            field: "body",
+            query: "title",
+            bool: "or"
+        }])).to.have.members(data);
+
+        expect(index.search([{
+            field: "title",
+            query: "title",
+            bool: "and"
+        },{
+            field: "body",
+            query: "title",
+            bool: "or"
+        },{
+            field: "blacklist",
+            query: "x1",
+            bool: "not"
+        }])).to.have.members([data[1], data[2]]);
+
+        expect(index.search([{
+            field: "title",
+            query: "body",
+            bool: "or"
+        },{
+            field: "body",
+            query: "title",
+            bool: "or"
+        },{
+            field: "blacklist",
+            query: "x1",
+            bool: "not"
+        }])).to.have.length(0);
+
+        expect(index.search([{
+            field: "blacklist",
+            query: "x1",
+            bool: "not"
+        },{
+            field: "title",
+            query: "title",
+            bool: "or"
+        },{
+            field: "body",
+            query: "body",
+            bool: "or"
+        }])).to.have.members([data[1], data[2]]);
+
+        expect(index.search([{
+            field: "title",
+            query: "body",
+            bool: "or"
+        },{
+            field: "body",
+            query: "body",
+            bool: "and"
+        },{
+            field: "blacklist",
+            query: "x2",
+            bool: "not"
+        }])).to.have.members([data[0], data[2]]);
+
+        expect(index.search([{
+            field: "blacklist",
+            query: "x2",
+            bool: "not"
+        },{
+            field: "title",
+            query: "body",
+            bool: "or"
+        },{
+            field: "body",
+            query: "body",
+            bool: "and"
+        }])).to.have.members([data[0], data[2]]);
+
+        expect(index.search([{
+            field: "title",
+            query: "body",
+            bool: "or"
+        },{
+            field: "blacklist",
+            query: "x2",
+            bool: "not"
+        },{
+            field: "body",
+            query: "body",
+            bool: "and"
+        }])).to.have.members([data[0], data[2]]);
+
+        expect(index.search([{
+            field: "title",
+            query: "title",
+            bool: "and"
+        },{
+            field: "body",
+            query: "body",
+            bool: "and"
+        },{
+            field: "blacklist",
+            query: "x",
+            bool: "not"
+        }])).to.have.length(0);
+
+        expect(index.search([{
+            field: "title",
+            query: "title",
+            bool: "not"
+        },{
+            field: "body",
+            query: "body",
+            bool: "not"
+        },{
+            field: "blacklist",
+            query: "x",
+            bool: "not"
+        }])).to.have.length(0);
+    });
+});
+
+describe("Reserved Words", function(){
+
+    it("Should have been indexed properly", function(){
+
+        var index = new FlexSearch({
+            encode: false,
+            tokenize: "strict",
+            threshold: 0,
+            depth: 3
+        });
+
+        var array = Object.getOwnPropertyNames({}.__proto__);
+            array = array.concat(Object.getOwnPropertyNames(index));
+
+        array.push("prototype");
+        array.push("constructor");
+        array.push("__proto__");
+
+        if(env !== "min"){
+
+            array.push("concat");
+            array.push("hasOwnProperty");
+            array.push("length");
+        }
+
+        for(var i = 0; i < array.length; i++){
+
+            index.add(array[i], array[i]);
+        }
+
+        for(var i = 0; i < array.length; i++){
+
+            // TODO: this word is reserved and can't be indexed
+            if(array[i] === "_ctx"){
+
+                continue;
+            }
+
+            expect(index.search(array[i])).to.have.members([array[i]]);
+        }
+    });
+});
+
+// ------------------------------------------------------------------------
+// Export / Import
+// ------------------------------------------------------------------------
+
+if(env !== "light") describe("Export / Import", function(){
+
+    var data;
+
+    it("Should have been exported properly", function(){
+
+        var index = new FlexSearch("match");
+
+        index.add(0, "foo");
+        index.add(1, "bar");
+        index.add(2, "foobar");
+
+        data = index.export();
+
+        if(env === ""){
+
+            expect(data).to.equal(JSON.stringify(
+                [
+                    index._map,
+                    index._ctx,
+                    Object.keys(index._ids)
+                ]
+            ));
+        }
+    });
+
+    it("Should have been imported properly", function(){
+
+        var index = new FlexSearch("match");
+
+        index.import(data);
+
+        expect(index.length).to.equal(3);
+
+        expect(index.search("foo")).to.have.lengthOf(2);
+        expect(index.search("bar")).to.have.lengthOf(2);
+        expect(index.search("foobar")).to.have.lengthOf(1);
+        expect(index.search("foobar")[0]).to.equal(2);
+    });
+
+    it("Should have been exported properly (documents)", function(){
+
+        var index = new FlexSearch({
+            encode: "icase",
+            tokenize: "strict",
+            threshold: 1,
+            resolution: 3,
+            depth: 1,
+            doc: {
+                id: "id",
+                field: ["title", "content"]
+            }
+        });
+
+        var docs = [{
+            id: 1,
+            title: "Title 2",
+            content: "foobar"
+        },{
+            id: 0,
+            title: "Title 1",
+            content: "foo"
+        },{
+            id: 2,
+            title: "Title 3",
+            content: "bar"
+        }];
+
+        index.add(docs);
+        data = index.export();
+
+        if(env === ""){
+
+            expect(index.doc.index["title"].length).to.equal(3);
+            expect(data).to.equal(JSON.stringify([
+                [
+                    index.doc.index["title"]._map,
+                    index.doc.index["title"]._ctx,
+                    Object.keys(index.doc.index["title"]._ids)
+                ],
+                [
+                    index.doc.index["content"]._map,
+                    index.doc.index["content"]._ctx,
+                    Object.keys(index.doc.index["content"]._ids)
+                ],
+                index._doc
+            ]));
+        }
+    });
+
+    it("Should have been imported properly (documents)", function(){
+
+        var index = new FlexSearch({
+            encode: "icase",
+            tokenize: "strict",
+            threshold: 1,
+            resolution: 3,
+            depth: 1,
+            doc: {
+                id: "id",
+                field: ["title", "content"]
+            }
+        });
+
+        index.import(data);
+
+        if(env === ""){
+
+            expect(index.doc.index["title"].length).to.equal(3);
+            expect(index.doc.index["content"].length).to.equal(3);
+        }
+
+        expect(index.search("foo")).to.have.lengthOf(1);
+        expect(index.search("bar")).to.have.lengthOf(1);
+        expect(index.search("foobar")).to.have.lengthOf(1);
+        expect(index.search("foobar")[0].id).to.equal(1);
+    });
+});
+
+// ------------------------------------------------------------------------
+// Presets
+// ------------------------------------------------------------------------
+
+describe("Presets", function(){
+
+    it("Should have been properly initialized", function(){
+
+        expect(FlexSearch.create("memory").length).to.equal(0);
+        expect(FlexSearch.create("speed").length).to.equal(0);
+        expect(FlexSearch.create("match").length).to.equal(0);
+        expect(FlexSearch.create("score").length).to.equal(0);
+        expect(FlexSearch.create("balance").length).to.equal(0);
+        expect(FlexSearch.create("fast").length).to.equal(0);
+    });
+
+    it("Should have been properly extended", function(){
+
+        var index = FlexSearch.create("fast");
+        index.add(0, "foobar");
+        expect(index.search("bar")).to.have.lengthOf(0);
+
+        index = FlexSearch.create("fast", {id: "test", tokenize: "reverse"});
+        expect(index.id).to.equal("test");
+        index.add(0, "foobar");
+        expect(index.search("bar")).to.have.lengthOf(1);
+        expect(index.search("bar")).to.have.members([0])
+    });
+});
 
 // ------------------------------------------------------------------------
 // Feature Tests
@@ -1178,12 +2878,13 @@ if(env !== "light" && env !== "min"){
             expect(info).to.have.keys([
 
                 "id",
-                "chars",
+                //"chars",
                 "cache",
                 "items",
                 "matcher",
-                "memory",
-                "sequences",
+                //"memory",
+                //"sequences",
+                "resolution",
                 "worker",
                 "contextual",
                 "depth",
@@ -1192,6 +2893,45 @@ if(env !== "light" && env !== "min"){
         });
     });
 }
+
+// ------------------------------------------------------------------------
+// Destroy
+// ------------------------------------------------------------------------
+
+describe("Destroy", function(){
+
+    it("Should have been destroyed properly", function(){
+
+        var index = FlexSearch.create()
+                              .add(0, "foo")
+                              .add(1, "bar");
+
+        expect(index.search("foo")).to.include(0);
+        expect(index.search("bar")).to.include(1);
+
+        index.destroy();
+
+        expect(index.search("foo")).to.have.lengthOf(0);
+        expect(index.search("bar")).to.have.lengthOf(0);
+    });
+
+    if(env !== "light") it("Should have been destroyed properly (documents)", function(){
+
+        var data = [{id: 0, title: "foo"}, {id: 1, title: "bar"}];
+
+        var index = FlexSearch.create({doc: {id: "id", field: "title"}})
+                              .add(data)
+                              .add(data);
+
+        expect(index.search("foo")).to.have.members([data[0]]);
+        expect(index.search("bar")).to.have.members([data[1]]);
+
+        index.destroy();
+
+        expect(index.search("foo")).to.have.lengthOf(0);
+        expect(index.search("bar")).to.have.lengthOf(0);
+    });
+});
 
 // ------------------------------------------------------------------------
 // Chaining
